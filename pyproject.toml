@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "ig-story-fetcher"
+version = "0.1.0"
+description = ""
+authors = ["Bruno Inec <contact@sweenu.xyz>"]
+packages = [
+    { include = "ig_story_fetcher.py" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+instagrapi = "^1.17.10"
+pillow = "9.4.0"
+moviepy = "^1.0.3"
+boto3 = "^1.26.137"
+setuptools = "*" # fix for imageio_ffmpeg which uses pkgs_resources
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+ig-story-fetcher = "ig_story_fetcher:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
