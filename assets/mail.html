@@ -1,0 +1,51 @@
+<!-- largely copied from https://www.emailonacid.com/blog/article/email-development/a_how_to_guide_to_embedding_html5_video_in_email/ -->
+<!doctype html>
+<html>
+<head>
+<title>Instagram Stories</title>
+<style type="text/css">
+  .video-wrapper {display:none;}
+  @media (-webkit-min-device-pixel-ratio: 0) and (min-device-width:1024px)
+  {
+    .video-wrapper { display:block!important; }
+    .video-fallback { display:none!important; }
+  }
+  @supports (-webkit-overflow-scrolling:touch) and (color:#ffffffff) {
+    div[class^=video-wrapper] { display:block!important; }
+    div[class^=video-fallback] { display:none!important; }
+  }
+  #MessageViewBody .video-wrapper { display:block!important; }
+  #MessageViewBody .video-fallback { display:none!important; }
+</style>
+</head>
+<body>
+<b>${email_text}</b><br>
+
+    <a href="${url}">
+      <img width="200" height="200"
+        src="https://cdn.pixabay.com/photo/2017/11/10/05/34/play-2935460_960_720.png"
+      />
+    </a>
+
+<!-- video section -->
+<div class="video-wrapper" style="display:none;">
+  <video width="400" height="700" controls="controls"  poster="https://cdn.pixabay.com/photo/2017/11/10/05/34/play-2935460_960_720.png" src="${url}" >
+    <!-- fallback 1 -->
+    <a href="${url}">
+      <img width="250" height="250"
+        src="https://cdn.pixabay.com/photo/2017/11/10/05/34/play-2935460_960_720.png"
+      />
+    </a>
+  </video>
+</div>
+
+<!-- fallback section -->
+<div class="video-fallback">
+  <a href="${url}">
+    <img width="250" height="250"
+      src="https://cdn.pixabay.com/photo/2017/11/10/05/34/play-2935460_960_720.png"
+    />
+  </a>
+</div>
+</body>
+</html>

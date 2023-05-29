@@ -3,12 +3,14 @@ import logging
 import tomllib
 import smtplib
 import ssl
+import importlib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import date, timedelta
 from glob import glob
 from tempfile import TemporaryDirectory
 from pathlib import Path
+from string import Template
 
 from instagrapi import Client
 from instagrapi.exceptions import LoginRequired
@@ -101,6 +103,7 @@ def set_settings(client: Client, config: dict) -> None:
 
 
 def main():
+    # Initialize non-instagrapi clients and config
     with open(sys.argv[1], "rb") as conf:
         config = tomllib.load(conf)
 
@@ -115,17 +118,34 @@ def main():
     )
     user_id = config["ig_user_id"]
 
+    s3 = boto3.client(
+        "s3",
+        region_name=config["s3"]["region_name"],
+        endpoint_url=config["s3"]["endpoint_url"],
+        aws_access_key_id=config["s3"]["access_key_id"],
+        aws_secret_access_key=config["s3"]["secret_access_key"],
+        config=Config(signature_version="s3v4"),
+    )
+    bucket_name = config["s3"]["bucket_name"]
+
+    from_address = config["email"]["from_address"]
+    to_addresses = ", ".join(config["email"]["mailing_list"])
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Stories of the day"
+    message["From"] = f"Instagram Stories <{from_address}>"
+    message["To"] = to_addresses
+    html_template = importlib.resources.files("assets").joinpath("mail.html").read_text()
+    yesterday = date.today() - timedelta(days=1)
+    email_text = f"Stories of {yesterday:%d, %b %Y}"
+    video_filename = f"{yesterday}.mp4"
+
+    # Initialize instagrapi client with user defined settings
     client = Client()
-
-    # Get and set settings from config
     set_settings(client, config["instagrapi_settings"])
-
     login_user(client, username, password, session_file)
 
     # Make one video out of all of the day's stories
     stories = client.user_stories(user_id=user_id)
-    yesterday = date.today() - timedelta(days=1)
-    video_filename = f"{yesterday}.mp4"
     with TemporaryDirectory() as stories_dir:
         for story in stories:
             client.story_download(
@@ -138,15 +158,6 @@ def main():
         concatenate_stories(stories_dir, video_fullpath)
 
         # Send the final video to an s3 bucket
-        s3 = boto3.client(
-            "s3",
-            region_name=config["s3"]["region_name"],
-            endpoint_url=config["s3"]["endpoint_url"],
-            aws_access_key_id=config["s3"]["access_key_id"],
-            aws_secret_access_key=config["s3"]["secret_access_key"],
-            config=Config(signature_version="s3v4"),
-        )
-        bucket_name = config["s3"]["bucket_name"]
         key = f"{config['s3']['bucket_folder']}/{video_filename}"
         with open(video_fullpath, "rb") as video:
             s3.put_object(
@@ -161,30 +172,11 @@ def main():
         "get_object", Params={"Bucket": bucket_name, "Key": key}, ExpiresIn=86400
     )
 
-    from_address = config["email"]["from_address"]
-    to_addresses = ", ".join(config["email"]["mailing_list"])
-    message = MIMEMultipart("alternative")
-    message["Subject"] = "Stories of the day"
-    message["From"] = f"Instagram Stories <{from_address}>"
-    message["To"] = to_addresses
-
     # Create the plain-text and HTML version of your message
-    email_text = f"Stories of {yesterday:%d, %b %Y}"
     text = email_text + f": {url}"
-    html = f"""\
-    <html>
-      <body>
-         <p>{email_text}</p>
-         <a href="{url}">
-           <img width="150" height="150"
-               src="https://cdn.pixabay.com/photo/2017/11/10/05/34/play-2935460_960_720.png"
-           />
-         </a>
-      </body>
-    </html>
-    """
+    html = Template(html_template)
     message.attach(MIMEText(text, "plain"))
-    message.attach(MIMEText(html, "html"))
+    message.attach(MIMEText(html.substitute(email_text=email_text, url=url), "html"))
 
     # Send an email to all configured emails
     context = ssl.create_default_context()

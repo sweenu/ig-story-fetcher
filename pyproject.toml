@@ -5,6 +5,7 @@ description = ""
 authors = ["Bruno Inec <contact@sweenu.xyz>"]
 packages = [
     { include = "ig_story_fetcher.py" },
+    { include = "assets" },
 ]
 
 [tool.poetry.dependencies]
