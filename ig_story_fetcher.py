@@ -82,6 +82,24 @@ def concatenate_stories(stories_dir: str, video_filename: str) -> None:
     merged_clip.write_videofile(video_filename)
 
 
+def set_settings(client: Client, config: dict) -> None:
+    if "locale" in config:
+        client.set_locale(config["locale"])
+    if "country" in config:
+        client.set_country(config["country"])
+    if "country_code" in config:
+        client.set_country_code(config["country_code"])
+    if "timezone_offset" in config:
+        client.set_timezone_offset(config["timezone_offset"])
+    if "device" in config:
+        client.set_device(config["device"])
+    if "user_agent" in config:
+        client.set_user_agent(config["user_agent"])
+    if "proxy" in config:
+        client.set_proxy(config["proxy"])
+
+
+
 def main():
     with open(sys.argv[1], "rb") as conf:
         config = tomllib.load(conf)
@@ -99,11 +117,8 @@ def main():
 
     client = Client()
 
-    # Change settings
-    client.set_locale("en_US")
-    client.set_country("FR")
-    client.set_country_code(33)
-    client.set_timezone_offset(3600) # UTC+1h
+    # Get and set settings from config
+    set_settings(client, config["instagrapi_settings"])
 
     login_user(client, username, password, session_file)
 
