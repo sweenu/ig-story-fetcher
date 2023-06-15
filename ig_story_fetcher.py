@@ -168,8 +168,9 @@ def main():
                 CacheControl="max-age=31556926",  # 1 year
             )
 
+    expiration = 604800  # 7 days, which is the maximum
     url = s3.generate_presigned_url(
-        "get_object", Params={"Bucket": bucket_name, "Key": key}, ExpiresIn=86400
+        "get_object", Params={"Bucket": bucket_name, "Key": key}, ExpiresIn=expiration
     )
 
     # Create the plain-text and HTML version of your message
