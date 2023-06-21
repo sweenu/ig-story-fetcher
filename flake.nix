@@ -1,39 +1,47 @@
 {
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, flake-utils }:
     let
-      pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      p2n-overrides = pkgs.poetry2nix.defaultPoetryOverrides.extend (self: super: {
-        instagrapi = super.instagrapi.overridePythonAttrs
-          (old: { buildInputs = (old.buildInputs or [ ]) ++ [ super.setuptools ]; });
-      });
+      localOverlay = final: prev: {
+        ig-story-fetcher = prev.poetry2nix.mkPoetryApplication {
+          projectDir = self;
+          python = prev.python311;
+          overrides = prev.poetry2nix.defaultPoetryOverrides.extend (self: super: {
+            instagrapi = super.instagrapi.overridePythonAttrs
+              (old: { buildInputs = (old.buildInputs or [ ]) ++ [ super.setuptools ]; });
+          });
+        };
+      };
+
+      pkgsForSystem = system: import nixpkgs {
+        inherit system;
+        overlays = [ localOverlay ];
+      };
     in
-    {
-      packages.x86_64-linux.ig-story-fetcher = pkgs.poetry2nix.mkPoetryApplication {
-        projectDir = self;
-        python = pkgs.python311;
-        overrides = p2n-overrides;
-      };
-      packages.x86_64-linux.default = self.packages.x86_64-linux.ig-story-fetcher;
+    flake-utils.lib.eachDefaultSystem
+      (system: rec
+      {
+        legacyPackages = pkgsForSystem system;
 
-      devShells.x86_64-linux.default = pkgs.mkShellNoCC {
-        packages = with pkgs; [
-          (poetry2nix.mkPoetryEnv {
-            projectDir = self;
-            python = pkgs.python311;
-            overrides = p2n-overrides;
-          })
-          poetry
-          python311
-        ];
-      };
+        packages = rec {
+          inherit (legacyPackages) ig-story-fetcher;
+          default = ig-story-fetcher;
+        };
 
+        devShells.default = legacyPackages.mkShell {
+          packages = with legacyPackages; [
+            poetry
+            python311
+          ];
+        };
+
+        apps.ig-story-fetcher = flake-utils.lib.mkApp { drv = packages.ig-story-fetcher; };
+      }) // rec {
       nixosModules.ig-story-fetcher = import ./modules/ig-story-fetcher.nix;
-      nixosModules.default = self.nixosModules.ig-story-fetcher;
+      nixosModules.default = nixosModules.ig-story-fetcher;
 
-      overlays.default = _: _: {
-        ig-story-fetcher = self.packages.x86_64-linux.ig-story-fetcher;
-      };
+      overlays.default = localOverlay;
     };
 }
