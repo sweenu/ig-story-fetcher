@@ -43,6 +43,13 @@ in
         system was powered down.
       '';
     };
+    postStop = mkOption {
+      type = with types; nullOr str;
+      default = null;
+      description = lib.mdDoc ''
+        A script that must run after the end of the process.
+      '';
+    };
   };
 
   config = mkIf cfg.enable {
@@ -52,6 +59,10 @@ in
         ExecStart = "${pkgs.ig-story-fetcher}/bin/ig-story-fetcher ${cfg.settingsPath}";
       };
       startAt = cfg.schedule;
+    } // optionalAttrs (cfg.postStop != null) {
+      postStop = ''
+        ${pkgs.writeScript "postStop" cfg.postStop}
+      '';
     };
     systemd.timers.ig-story-fetcher = {
       timerConfig = {
