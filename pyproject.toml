@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-instagrapi = "^1.17.10"
+instagrapi = "^1.19.7"
 pillow = "9.4.0"
 moviepy = "^1.0.3"
 boto3 = "^1.26.137"
