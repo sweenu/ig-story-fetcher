@@ -81,7 +81,7 @@ def concatenate_stories(stories_dir: str, video_filename: str) -> None:
         stories.append(VideoFileClip(story))
 
     merged_clip = concatenate_videoclips(stories)
-    merged_clip.write_videofile(video_filename)
+    merged_clip.write_videofile(video_filename, audio_codec="aac")
 
 
 def set_settings(client: Client, config: dict) -> None:
