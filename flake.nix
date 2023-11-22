@@ -1,16 +1,23 @@
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    poetry2nix = {
+      url = "github:nix-community/poetry2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, poetry2nix }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      p2n-overrides = pkgs.poetry2nix.defaultPoetryOverrides.extend (self: super: {
+      inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryApplication mkPoetryEnv defaultPoetryOverrides;
+      p2n-overrides = defaultPoetryOverrides.extend (self: super: {
         instagrapi = super.instagrapi.overridePythonAttrs
           (old: { buildInputs = (old.buildInputs or [ ]) ++ [ super.setuptools ]; });
       });
     in
     {
-      packages.x86_64-linux.ig-story-fetcher = pkgs.poetry2nix.mkPoetryApplication {
+      packages.x86_64-linux.ig-story-fetcher = mkPoetryApplication {
         projectDir = self;
         python = pkgs.python311;
         overrides = p2n-overrides;
@@ -19,7 +26,7 @@
 
       devShells.x86_64-linux.default = pkgs.mkShellNoCC {
         packages = with pkgs; [
-          (poetry2nix.mkPoetryEnv {
+          (mkPoetryEnv {
             projectDir = self;
             python = pkgs.python311;
             overrides = p2n-overrides;
